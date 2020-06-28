@@ -19,7 +19,7 @@ This application is solely used for visual appeal and offline library viewing.
   <img src="wiki/screenshots/Screenshot_20200628-110727_Calibre_Viewer.png" width="300" />
   <img src="wiki/screenshots/Screenshot_20200628-110912_Calibre_Viewer.png" width="300" />
   <img src="wiki/screenshots/Screenshot_20200628-110926_Calibre_Viewer.png" width="300" />
-  <img src="wiki/screenshots/Screenshot_20200628-11109_Calibre_Viewer.png" width="300" />
+  <img src="wiki/screenshots/Screenshot_20200628-111019_Calibre_Viewer.png" width="300" />
 </p>
 
 
