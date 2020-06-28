@@ -3,9 +3,11 @@ package me.sedlar.calibreviewer.task
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.AsyncTask
+import me.sedlar.calibre.opds.OPDSConnector
 import me.sedlar.calibre.opds.OPDSParser
 import me.sedlar.calibre.opds.local.OPDSLibrary
 import me.sedlar.calibreviewer.MainActivity
+import me.sedlar.calibreviewer.hasNetworkConnection
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -22,6 +24,19 @@ class LibraryParseTask(private val activity: MainActivity, private val onFinish:
             password = params[2],
             dataDir = File(params[3])
         )
+
+        val xmlFile = File(File(params[3]), "calibre_opds.xml")
+        val forceNetwork = !xmlFile.exists()
+        val checker = OPDSConnector.checker
+
+        if (forceNetwork) {
+            println("Forcing checker to non-cache")
+            OPDSConnector.checker = { activity.hasNetworkConnection() }
+        } else {
+            println("Library has already been parsed, using normal checker.")
+            println(xmlFile.absolutePath + " - " + xmlFile.exists())
+            println(xmlFile.length())
+        }
 
         val libs = parser.parse()
 
@@ -51,6 +66,10 @@ class LibraryParseTask(private val activity: MainActivity, private val onFinish:
                     }
                 }
             }
+        }
+
+        if (forceNetwork) {
+            OPDSConnector.checker = checker
         }
 
         return libs
