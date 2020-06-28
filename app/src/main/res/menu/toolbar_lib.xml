@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:libapp="http://schemas.android.com/apk/res-auto"
+      xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item android:id="@+id/spinLibraries"
+          libapp:showAsAction="ifRoom"
+          libapp:actionViewClass="android.widget.Spinner"
+          android:visible="false"/>
+
+    <item android:id="@+id/menuLibOptions"
+          android:orderInCategory="101"
+          app:showAsAction="always"
+          android:icon="@drawable/ic_more_vert"
+          android:visible="false">
+
+        <menu>
+            <item android:id="@+id/action_sync"
+                  app:showAsAction="ifRoom"
+                  android:title="Sync"/>
+
+            <item android:id="@+id/action_show_titles"
+                  app:showAsAction="ifRoom"
+                  android:title="Show Titles"
+                  android:checkable="true"
+                  android:checked="true"/>
+
+            <item android:id="@+id/action_cache_mode"
+                  app:showAsAction="ifRoom"
+                  android:title="Cache Mode"
+                  android:checkable="true"
+                  android:checked="true"/>
+
+            <item android:id="@+id/action_change_server"
+                  app:showAsAction="ifRoom"
+                  android:title="Change Server"/>
+        </menu>
+
+    </item>
+</menu>

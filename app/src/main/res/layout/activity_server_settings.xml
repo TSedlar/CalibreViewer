@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".MainActivity"
+        android:layout_margin="10dp">
+
+    <TextView
+            android:id="@+id/lblAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="IP Address:"
+            android:textStyle="bold"
+            android:textSize="16sp"/>
+    <EditText
+            android:id="@+id/txtAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/lblAddress"
+            android:inputType="textPersonName"
+            android:hint="IP Address"
+            android:ems="10"/>
+
+    <TextView
+            android:id="@+id/lblPort"
+            android:layout_alignTop="@+id/lblAddress"
+            android:layout_toRightOf="@+id/txtAddress"
+            android:layout_toEndOf="@+id/txtAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Port:"
+            android:textStyle="bold"
+            android:textSize="16sp"/>
+    <EditText
+            android:id="@+id/txtPort"
+            android:layout_below="@+id/lblPort"
+            android:layout_toRightOf="@+id/txtAddress"
+            android:layout_toEndOf="@+id/txtAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="textPersonName"
+            android:hint="Port"
+            android:ems="10"/>
+
+    <TextView
+            android:id="@+id/lblUser"
+            android:layout_below="@+id/txtAddress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Username:"
+            android:textStyle="bold"
+            android:textSize="16sp"/>
+    <EditText
+            android:id="@+id/txtUser"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/lblUser"
+            android:inputType="textPersonName"
+            android:hint="Username"
+            android:ems="10"/>
+
+    <TextView
+            android:id="@+id/lblPass"
+            android:layout_below="@+id/txtUser"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Password:"
+            android:textStyle="bold"
+            android:textSize="16sp"/>
+    <EditText
+            android:id="@+id/txtPass"
+            android:layout_below="@+id/lblPass"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPassword"
+            android:hint="Password"
+            android:ems="10"/>
+
+    <Button
+            android:id="@+id/btnSave"
+            android:text="Save"
+            android:layout_below="@id/txtPass"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+</RelativeLayout>
