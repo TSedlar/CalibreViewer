@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import me.sedlar.calibreviewer.util.SeriesFilter
+
 
 fun AppCompatActivity.hasNetworkConnection(): Boolean {
     var result = false
@@ -83,4 +85,13 @@ fun AppCompatActivity.restartMainActivity(forceNetwork: Boolean = false, filter:
 fun AppCompatActivity.dp2px(dp: Float): Int {
     return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, applicationContext.resources.displayMetrics)
         .toInt()
+}
+
+fun AppCompatActivity.getDrawableFromAttrRes(attrRes: Int): Drawable? {
+    val array = obtainStyledAttributes(intArrayOf(attrRes))
+    return try {
+        array.getDrawable(0)
+    } finally {
+        array.recycle()
+    }
 }

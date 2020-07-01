@@ -1,6 +1,8 @@
 package me.sedlar.calibreviewer
 
+import android.app.DownloadManager
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -16,6 +18,7 @@ import me.sedlar.calibre.opds.local.OPDSLibrary
 import me.sedlar.calibre.opds.local.OPDSSeries
 import me.sedlar.calibreviewer.adapter.SeriesListRecyclerViewAdapter
 import me.sedlar.calibreviewer.holder.SeriesHolder
+import me.sedlar.calibreviewer.task.AcquisitionDownloadTask
 import me.sedlar.calibreviewer.task.SeriesParseTask
 
 
@@ -24,6 +27,8 @@ class EntryListActivity : AppCompatActivity() {
     private var library: OPDSLibrary? = null
     private var series: OPDSSeries? = null
     private var libGrid: RecyclerView? = null
+    private var libGridAdapter: SeriesListRecyclerViewAdapter? = null
+
     private var refreshedThumbs = false
 
     override fun onCreate(bundle: Bundle?) {
@@ -40,6 +45,8 @@ class EntryListActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
+        registerReceiver(AcquisitionDownloadTask.RECEIVER, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+
         setContentView(R.layout.activity_series_entries)
 
         SeriesParseTask(this, onFinish = {
@@ -47,8 +54,27 @@ class EntryListActivity : AppCompatActivity() {
         }).execute(SeriesHolder(library!!, series!!))
     }
 
+    override fun onDestroy() {
+        unregisterReceiver(AcquisitionDownloadTask.RECEIVER)
+        super.onDestroy()
+    }
+
+    override fun onBackPressed() {
+        var override = false
+
+        libGridAdapter?.let { adapter ->
+            override = adapter.onBack()
+        }
+
+        if (!override) {
+            super.onBackPressed()
+        }
+    }
+
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.toolbar_series, menu)
+        if (libGridAdapter == null || !libGridAdapter!!.createMenu(menu)) {
+            menuInflater.inflate(R.menu.toolbar_series, menu)
+        }
 
         // Add sync cover handler
         menu?.findItem(R.id.action_sync_covers)?.let { menuItem ->
@@ -81,9 +107,13 @@ class EntryListActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == android.R.id.home) {
-            finish() // Go back to MainActivity
-            if (refreshedThumbs) {
-                restartMainActivity()
+            if (libGridAdapter != null && libGridAdapter!!.isSelectMode()) {
+                onBackPressed()
+            } else {
+                finish() // Go back to MainActivity
+                if (refreshedThumbs) {
+                    restartMainActivity()
+                }
             }
         }
         return super.onOptionsItemSelected(item)
@@ -106,8 +136,8 @@ class EntryListActivity : AppCompatActivity() {
             grid.visibility = View.VISIBLE
             grid.layoutManager = GridLayoutManager(this, calculateNoOfColumns(130F))
 
-            val recyclerViewAdapter = SeriesListRecyclerViewAdapter(this, SeriesHolder(library!!, series!!))
-            grid.adapter = recyclerViewAdapter
+            libGridAdapter = SeriesListRecyclerViewAdapter(this, grid, SeriesHolder(library!!, series!!))
+            grid.adapter = libGridAdapter
         }
     }
 
@@ -137,7 +167,7 @@ class EntryListActivity : AppCompatActivity() {
 
     private fun setTitleVisibility(visible: Boolean) {
         sharedPrefs.edit().putBoolean(KEY_SHOW_TITLES, visible).apply()
-        libGrid?.adapter = libGrid?.adapter // redraws the items in the grid
+        libGrid?.redraw()
     }
 
     fun setProgressLabel(text: String) {

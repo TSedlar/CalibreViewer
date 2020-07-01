@@ -2,6 +2,7 @@ package me.sedlar.calibreviewer.adapter
 
 import android.content.Intent
 import android.view.LayoutInflater
+import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -15,21 +16,113 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import me.sedlar.calibre.opds.OPDSConnector
 import me.sedlar.calibre.opds.model.OPDSAcquisition
 import me.sedlar.calibre.opds.model.OPDSSeriesEntry
-import me.sedlar.calibreviewer.BuildConfig
-import me.sedlar.calibreviewer.EntryListActivity
-import me.sedlar.calibreviewer.R
-import me.sedlar.calibreviewer.hasNetworkConnection
+import me.sedlar.calibreviewer.*
 import me.sedlar.calibreviewer.holder.SeriesHolder
 import me.sedlar.calibreviewer.task.AcquisitionDownloadTask
 import me.sedlar.calibreviewer.task.ImageDecodeTask
 import java.io.File
 
 
-class SeriesListRecyclerViewAdapter(private val activity: EntryListActivity, private val holder: SeriesHolder) :
-    RecyclerView.Adapter<SeriesListRecyclerViewAdapter.ItemViewHolder>() {
+class SeriesListRecyclerViewAdapter(
+    private val activity: EntryListActivity,
+    private val parent: RecyclerView,
+    private val holder: SeriesHolder
+) : RecyclerView.Adapter<SeriesListRecyclerViewAdapter.ItemViewHolder>() {
+
+    private var selectMode = false
+    private val selected = ArrayList<OPDSSeriesEntry>()
 
     init {
         println("SeriesListRecyclerViewAdapter[size=${itemCount}]")
+    }
+
+    fun onBack(): Boolean {
+        println("onBack called..")
+        if (selectMode) {
+            clearSelections()
+            println("Canceled series entry multiselect")
+            return true
+        }
+        return false
+    }
+
+    fun createMenu(menu: Menu?): Boolean {
+        if (selectMode) {
+            activity.menuInflater.inflate(R.menu.toolbar_series_multiselect, menu)
+
+            // Add download handler
+            menu?.findItem(R.id.action_download)?.let { menuItem ->
+                menuItem.setOnMenuItemClickListener {
+                    clearSelections(true)
+
+                    var dlCount = 0
+
+                    selected.forEach { entry ->
+                        entry.acquisitions.forEach { acquisition ->
+                            holder.lib.getAcquisitionFile(holder.series, entry, acquisition).let { acqFile ->
+                                if (!acqFile.exists()) {
+                                    dlCount++
+                                    handleAcquisitionDownload(entry, acquisition.fileExtension)
+                                }
+                            }
+                        }
+                    }
+
+                    if (dlCount > 0) {
+                        doToast("Starting downloads...", Toast.LENGTH_LONG)
+                    } else {
+                        doToast("Files already downloaded!", Toast.LENGTH_SHORT)
+                    }
+
+                    selected.clear()
+
+                    true
+                }
+            }
+
+            // Add delete handler
+            menu?.findItem(R.id.action_delete)?.let { menuItem ->
+                menuItem.setOnMenuItemClickListener {
+                    doToast("Deleting selections...", Toast.LENGTH_LONG)
+
+                    clearSelections(true)
+
+                    selected.forEach { entry ->
+                        entry.acquisitions.forEach { acquisition ->
+                            holder.lib.getAcquisitionFile(holder.series, entry, acquisition)?.let { acqFile ->
+                                if (acqFile.exists()) {
+                                    acqFile.delete()
+                                }
+                            }
+                        }
+                    }
+
+                    selected.clear()
+
+                    doToast("Selections deleted!", Toast.LENGTH_SHORT)
+
+                    true
+                }
+            }
+
+            // Add select handler
+            menu?.findItem(R.id.action_select_all)?.let { menuItem ->
+                menuItem.setOnMenuItemClickListener {
+                    selected.clear()
+                    selected.addAll(holder.series.entries)
+                    parent.redraw()
+
+                    true
+                }
+            }
+
+            return true
+        }
+        return false
+    }
+
+    fun isSelectMode(): Boolean {
+        return selectMode
     }
 
     override fun onCreateViewHolder(viewGroup: ViewGroup, type: Int): ItemViewHolder {
@@ -46,46 +139,83 @@ class SeriesListRecyclerViewAdapter(private val activity: EntryListActivity, pri
 
         viewHolder.lblEntryTitle?.text = toTitleName(entry.title)
         viewHolder.lblEntryTitle?.visibility = if (activity.isShowingTitles()) View.VISIBLE else View.GONE
+        viewHolder.selectBackground?.visibility =
+            if (selectMode && selected.contains(entry)) View.VISIBLE else View.GONE
+
+        viewHolder.itemView.setOnLongClickListener {
+            println("Enabled multiselect mode")
+
+            selectMode = true
+            activity.invalidateOptionsMenu()
+
+            handleSelection(entry, viewHolder)
+
+            true
+        }
 
         viewHolder.itemView.setOnClickListener { view ->
-            val bookDialog: AlertDialog.Builder = AlertDialog.Builder(view.context)
-            bookDialog.setTitle(entry.title)
+            if (selectMode) {
+                handleSelection(entry, viewHolder)
+            } else {
+                val bookDialog: AlertDialog.Builder = AlertDialog.Builder(view.context)
+                bookDialog.setTitle(entry.title)
 
-            val actions = generateActionList(entry)
+                val actions = generateActionList(entry)
 
-            val arrayAdapter = ArrayAdapter<String>(
-                view.context, android.R.layout.select_dialog_item, actions.toTypedArray()
-            )
+                val arrayAdapter = ArrayAdapter<String>(
+                    view.context, android.R.layout.select_dialog_item, actions.toTypedArray()
+                )
 
-            bookDialog.setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
+                bookDialog.setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
 
-            bookDialog.setAdapter(arrayAdapter) { dialog, which ->
-                arrayAdapter.getItem(which)?.let { selection ->
-                    when (selection.toLowerCase()) {
-                        "download epub" -> handleAcquisitionDownload(entry, "epub")
-                        "open epub" -> handleAcquisitionOpen(entry, "epub")
-                        "delete epub" -> handleAcquisitionDelete(entry, "epub")
+                bookDialog.setAdapter(arrayAdapter) { dialog, which ->
+                    arrayAdapter.getItem(which)?.let { selection ->
+                        when (selection.toLowerCase()) {
+                            "download epub" -> handleAcquisitionDownload(entry, "epub")
+                            "open epub" -> handleAcquisitionOpen(entry, "epub")
+                            "delete epub" -> handleAcquisitionDelete(entry, "epub")
 
-                        "download zip" -> handleAcquisitionDownload(entry, "zip")
-                        "open zip" -> handleAcquisitionOpen(entry, "zip")
-                        "delete zip" -> handleAcquisitionDelete(entry, "zip")
+                            "download zip" -> handleAcquisitionDownload(entry, "zip")
+                            "open zip" -> handleAcquisitionOpen(entry, "zip")
+                            "delete zip" -> handleAcquisitionDelete(entry, "zip")
 
 
-                        else -> {
-                            Toast.makeText(view.context, "Unsupported action: $selection", Toast.LENGTH_LONG)
+                            else -> {
+                                Toast.makeText(view.context, "Unsupported action: $selection", Toast.LENGTH_LONG)
+                            }
                         }
                     }
+
+                    dialog.dismiss()
                 }
 
-                dialog.dismiss()
+                bookDialog.show()
             }
-
-            bookDialog.show()
         }
     }
 
     override fun getItemCount(): Int {
         return holder.series.entries.size
+    }
+
+    private fun clearSelections(visualOnly: Boolean = false) {
+        selectMode = false
+        if (!visualOnly) {
+            selected.clear()
+        }
+        parent.redraw()
+        activity.invalidateOptionsMenu()
+    }
+
+    private fun handleSelection(entry: OPDSSeriesEntry, viewHolder: ItemViewHolder) {
+        if (selected.contains(entry)) {
+            selected.remove(entry)
+        } else {
+            selected.add(entry)
+        }
+
+        viewHolder.selectBackground?.visibility =
+            if (selectMode && selected.contains(entry)) View.VISIBLE else View.GONE
     }
 
     private fun generateActionList(entry: OPDSSeriesEntry): List<String> {
@@ -152,19 +282,29 @@ class SeriesListRecyclerViewAdapter(private val activity: EntryListActivity, pri
     }
 
     private fun downloadAcquisition(entry: OPDSSeriesEntry, acquisition: OPDSAcquisition) {
-        doToast("Downloading epub...", Toast.LENGTH_LONG)
+        val title = "${holder.series.name} - ${entry.title} (${acquisition.fileExtension})"
+        
+        println("Downloading $title")
+        doToast("Downloading $title...", Toast.LENGTH_LONG)
 
         val checker = OPDSConnector.checker
 
         OPDSConnector.checker = { activity.hasNetworkConnection() }
 
-        AcquisitionDownloadTask(holder, entry, onFinish = { successful ->
+        AcquisitionDownloadTask(activity, holder, entry, onFinish = { successful ->
             OPDSConnector.checker = checker
             if (successful) {
-                doToast("Downloaded epub!", Toast.LENGTH_SHORT)
+                println("Downloaded $title!")
+                doToast("Downloaded $title!", Toast.LENGTH_SHORT)
             } else {
+                holder.lib.getAcquisitionFile(holder.series, entry, acquisition).let { acqFile ->
+                    if (acqFile.exists()) {
+                        acqFile.delete()
+                    }
+                }
                 if (activity.hasNetworkConnection()) {
-                    doToast("Failed to download...", Toast.LENGTH_SHORT)
+                    println("Failed to download $title...")
+                    doToast("Failed to download $title...", Toast.LENGTH_SHORT)
                 } else {
                     doToast("Connection unavailable...", Toast.LENGTH_SHORT)
                 }
@@ -174,6 +314,7 @@ class SeriesListRecyclerViewAdapter(private val activity: EntryListActivity, pri
 
     inner class ItemViewHolder(itemView: View) : ViewHolder(itemView) {
 
+        val selectBackground: View? = itemView.findViewById(R.id.selectBackground)
         val imgCover: ImageView? = itemView.findViewById(R.id.imgCover)
         val lblEntryTitle: TextView? = itemView.findViewById(R.id.lblEntryTitle)
     }

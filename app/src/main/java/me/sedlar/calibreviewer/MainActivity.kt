@@ -33,7 +33,16 @@ internal const val KEY_SHOW_TITLES = "KEY_HIDE_TITLES"
 
 class MainActivity : AppCompatActivity() {
 
-    private var dataDirectory: File? = null
+    private val dataDirectory: File?
+        get() {
+            if (checkSettings()) {
+                val address = getServerAddress()
+                val port = getServerPort()
+                return File(getExternalFilesDir(null), "$address.$port/".replace(".", "_"))
+            }
+            return null
+        }
+
     private val libraries = ArrayList<OPDSLibrary>()
     private var library: Int? = null
 
@@ -57,7 +66,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        dataDirectory = File(applicationContext.applicationInfo.dataDir)
         requestWritePermissions()
 
         val forceNetwork = intent.getBooleanExtra("forceNetwork", false)
@@ -165,7 +173,6 @@ class MainActivity : AppCompatActivity() {
 
         val address = getServerAddress()
         val port = getServerPort()
-        val dataDir = File(dataDirectory!!, "$address.$port/".replace(".", "_"))
 
         LibraryParseTask(this, onFinish = { libs ->
             println("Library parsed!")
@@ -187,7 +194,7 @@ class MainActivity : AppCompatActivity() {
                 "http://$address:$port",
                 getServerUser(),
                 getServerPass(),
-                dataDir.absolutePath
+                dataDirectory?.absolutePath
             )
     }
 
