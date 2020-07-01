@@ -19,6 +19,20 @@
                   app:showAsAction="ifRoom"
                   android:title="Sync"/>
 
+            <item android:id="@+id/action_filter"
+                  app:showAsAction="ifRoom"
+                  android:title="Filter"/>
+
+
+            <item android:id="@+id/action_remove_filter"
+                  app:showAsAction="ifRoom"
+                  android:title="Remove Filter"
+                  android:visible="false"/>
+
+            <item android:id="@+id/action_search"
+                  app:showAsAction="ifRoom"
+                  android:title="Search"/>
+
             <item android:id="@+id/action_show_titles"
                   app:showAsAction="ifRoom"
                   android:title="Show Titles"

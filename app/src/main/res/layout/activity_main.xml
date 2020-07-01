@@ -8,6 +8,17 @@
         android:layout_height="match_parent"
         tools:context=".MainActivity">
 
+    <TextView
+            android:id="@+id/lblFilter"
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            android:textSize="16sp"
+            android:textColor="#E2E1DB"
+            android:textAlignment="center"
+            android:background="#C94848"
+            android:text="Content is filtered"
+            android:visibility="gone"/>
+
     <ProgressBar
             android:id="@+id/progressIndicator"
             android:layout_width="match_parent"

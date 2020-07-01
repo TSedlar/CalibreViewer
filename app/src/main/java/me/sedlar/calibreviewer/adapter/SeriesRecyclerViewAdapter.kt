@@ -9,16 +9,23 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import me.sedlar.calibre.opds.local.OPDSLibrary
+import me.sedlar.calibre.opds.local.OPDSSeries
 import me.sedlar.calibreviewer.EntryListActivity
 import me.sedlar.calibreviewer.MainActivity
 import me.sedlar.calibreviewer.R
 import me.sedlar.calibreviewer.adapter.SeriesRecyclerViewAdapter.ItemViewHolder
 import me.sedlar.calibreviewer.task.ImageDecodeTask
+import me.sedlar.calibreviewer.util.SeriesFilter
 import java.io.File
 
 
-class SeriesRecyclerViewAdapter(private val activity: MainActivity, private val lib: OPDSLibrary) :
-    RecyclerView.Adapter<ItemViewHolder>() {
+class SeriesRecyclerViewAdapter(
+    private val activity: MainActivity,
+    private val lib: OPDSLibrary,
+    filter: SeriesFilter? = null
+) : RecyclerView.Adapter<ItemViewHolder>() {
+
+    private val data = filter?.run(lib.seriesList) ?: lib.seriesList
 
     init {
         println("SeriesRecyclerViewAdapter[size=${itemCount}]")
@@ -30,7 +37,7 @@ class SeriesRecyclerViewAdapter(private val activity: MainActivity, private val 
     }
 
     override fun onBindViewHolder(viewHolder: ItemViewHolder, position: Int) {
-        val series = lib.seriesList[position]
+        val series = data[position]
         val thumbnail = lib.getThumbFile(series, series.entries.first())
         val userDefinedThumbnail = File(thumbnail, "../cover.jpg")
 
@@ -51,7 +58,7 @@ class SeriesRecyclerViewAdapter(private val activity: MainActivity, private val 
     }
 
     override fun getItemCount(): Int {
-        return lib.seriesList.size
+        return data.size
     }
 
     inner class ItemViewHolder(itemView: View) : ViewHolder(itemView) {

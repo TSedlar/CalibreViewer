@@ -9,6 +9,10 @@
           android:title="">
 
         <menu>
+            <item android:id="@+id/action_sync_covers"
+                  app:showAsAction="ifRoom"
+                  android:title="Sync Covers"/>
+
             <item android:id="@+id/action_change_series_cover"
                   app:showAsAction="ifRoom"
                   android:title="Change Series Cover"/>

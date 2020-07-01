@@ -1,20 +1,24 @@
 package me.sedlar.calibreviewer
 
-import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.view.updateMargins
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import me.sedlar.calibre.opds.OPDSConnector
 import me.sedlar.calibre.opds.local.OPDSLibrary
 import me.sedlar.calibreviewer.adapter.SeriesRecyclerViewAdapter
 import me.sedlar.calibreviewer.task.LibraryParseTask
+import me.sedlar.calibreviewer.util.SeriesFilter
+import me.sedlar.calibreviewer.util.matchesQuery
 import java.io.File
 
 
@@ -44,6 +48,8 @@ class MainActivity : AppCompatActivity() {
     private val currentLib: OPDSLibrary?
         get() = libraries[if (library == null) 0 else library!!]
 
+    private var filter: SeriesFilter? = null
+
     init {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
     }
@@ -55,6 +61,10 @@ class MainActivity : AppCompatActivity() {
         requestWritePermissions()
 
         val forceNetwork = intent.getBooleanExtra("forceNetwork", false)
+
+        intent.extras?.get("filter")?.let { instanceFilter ->
+            filter = instanceFilter as SeriesFilter
+        }
 
         if (checkSettings()) {
             setContentView(R.layout.activity_main)
@@ -83,8 +93,37 @@ class MainActivity : AppCompatActivity() {
             // Add sync handler
             menu.findItem(R.id.action_sync)?.let { menuItem ->
                 menuItem.setOnMenuItemClickListener {
-                    restartApp(true) // force network on for syncing
+                    restartMainActivity(true) // force network on for syncing
                     true
+                }
+            }
+
+            // Add filter & search handler
+            if (filter != null) {
+                menu.findItem(R.id.action_filter)?.isVisible = false
+                menu.findItem(R.id.action_search)?.isVisible = false
+                menu.findItem(R.id.action_remove_filter)?.let { menuItem ->
+                    menuItem.isVisible = true
+                    menuItem.setOnMenuItemClickListener {
+                        removeFilters()
+                        true
+                    }
+                }
+            } else {
+                menu.findItem(R.id.action_filter)?.let { menuItem ->
+                    menuItem.isVisible = true
+                    menuItem.setOnMenuItemClickListener {
+                        showFilterDialog()
+                        true
+                    }
+                }
+
+                menu.findItem(R.id.action_search)?.let { menuItem ->
+                    menuItem.isVisible = true
+                    menuItem.setOnMenuItemClickListener {
+                        showSearchDialog()
+                        true
+                    }
                 }
             }
 
@@ -112,7 +151,7 @@ class MainActivity : AppCompatActivity() {
             menu.findItem(R.id.action_change_server)?.let { menuItem ->
                 menuItem.setOnMenuItemClickListener {
                     clearServerPreferences()
-                    restartApp()
+                    restartMainActivity()
                     true
                 }
             }
@@ -176,6 +215,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        if (filter != null) {
+            findViewById<TextView>(R.id.lblFilter)?.visibility = View.VISIBLE
+        } else {
+            findViewById<TextView>(R.id.lblFilter)?.visibility = View.GONE
+        }
+
         // Setup Library dropdown
         libSpinner?.let { spinner ->
             if (spinner.adapter == null) {
@@ -223,10 +268,13 @@ class MainActivity : AppCompatActivity() {
         // Add grid view of library
         findViewById<RecyclerView>(R.id.gridSeries)?.let { grid ->
             libGrid = grid
+            if (filter != null) {
+                (grid.layoutParams as RelativeLayout.LayoutParams).updateMargins(top = dp2px(28F))
+            }
             grid.visibility = View.VISIBLE
             grid.layoutManager = GridLayoutManager(this, calculateNoOfColumns(130F))
 
-            val recyclerViewAdapter = SeriesRecyclerViewAdapter(this, currentLib!!)
+            val recyclerViewAdapter = SeriesRecyclerViewAdapter(this, currentLib!!, filter)
             grid.adapter = recyclerViewAdapter
         }
     }
@@ -259,8 +307,7 @@ class MainActivity : AppCompatActivity() {
                     .putString(KEY_USER, user)
                     .putString(KEY_PASS, pass)
                     .apply()
-                setContentView(R.layout.activity_main)
-                parseLibraries()
+                restartMainActivity(true)
             }
         }
     }
@@ -331,13 +378,73 @@ class MainActivity : AppCompatActivity() {
             .apply()
     }
 
-    private fun restartApp(forceNetwork: Boolean = false) {
-        // Dispose of current activity
-        finish()
-        // Restart activity with 1x network
-        val restartIntent = Intent(applicationContext, MainActivity::class.java)
-        restartIntent.putExtra("forceNetwork", forceNetwork)
-        startActivity(restartIntent)
+    private fun showFilterDialog() {
+        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+        builder.setTitle("Choose Tags:")
+
+        val tags = HashSet<String>()
+
+        currentLib?.seriesList?.forEach { series ->
+            tags.addAll(series.tags)
+        }
+
+        val items = tags.toTypedArray().sortedArray()
+
+        val checkedItems = BooleanArray(items.size)
+
+        builder.setMultiChoiceItems(items, checkedItems) { _, which, isChecked ->
+            checkedItems[which] = isChecked
+        }
+
+        builder.setPositiveButton("OK") { _, _ ->
+            val selectedTags = ArrayList<String>()
+            items.forEachIndexed { index, tag ->
+                if (checkedItems[index]) {
+                    selectedTags.add(tag)
+                }
+            }
+
+            restartMainActivity(filter = SeriesFilter {
+                it.tags.containsAll(selectedTags)
+            })
+        }
+
+        builder.setNegativeButton("Cancel", null)
+
+        builder.create().show()
+    }
+
+    private fun showSearchDialog() {
+        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+        builder.setTitle("Search metadata:")
+
+        val input = EditText(this)
+        input.inputType = InputType.TYPE_CLASS_TEXT
+        builder.setView(input)
+
+        builder.setPositiveButton("OK") { _, _ ->
+            val query = input.text.toString().toLowerCase()
+
+            restartMainActivity(filter = SeriesFilter {
+                it.matchesQuery(query)
+            })
+        }
+
+        builder.setNegativeButton("Cancel", null)
+
+        builder.create().show()
+    }
+
+    private fun removeFilters() {
+        restartMainActivity()
+    }
+
+    override fun onBackPressed() {
+        if (checkSettings() && filter != null) {
+            restartMainActivity()
+        } else {
+            super.onBackPressed()
+        }
     }
 
     private fun toReadableName(libName: String): String {

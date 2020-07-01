@@ -2,14 +2,17 @@ package me.sedlar.calibreviewer
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
+import android.util.TypedValue
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import me.sedlar.calibreviewer.util.SeriesFilter
 
 fun AppCompatActivity.hasNetworkConnection(): Boolean {
     var result = false
@@ -64,3 +67,20 @@ fun AppCompatActivity.calculateNoOfColumns(columnWidthDp: Float): Int {
 
 val AppCompatActivity.sharedPrefs: SharedPreferences
     get() = getSharedPreferences("SharedPreferences", Context.MODE_PRIVATE)
+
+fun AppCompatActivity.restartMainActivity(forceNetwork: Boolean = false, filter: SeriesFilter? = null) {
+    // Dispose of current activity
+    finish()
+    // Restart activity with 1x network
+    val restartIntent = Intent(applicationContext, MainActivity::class.java)
+    restartIntent.putExtra("forceNetwork", forceNetwork)
+    if (filter != null) {
+        restartIntent.putExtra("filter", filter)
+    }
+    startActivity(restartIntent)
+}
+
+fun AppCompatActivity.dp2px(dp: Float): Int {
+    return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, applicationContext.resources.displayMetrics)
+        .toInt()
+}
