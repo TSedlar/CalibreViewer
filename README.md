@@ -26,13 +26,6 @@ This application is solely used for visual appeal and offline library viewing.
 ## Plans
 
 - The series cover view changer needs to be implemented
-- Currently only series view is supported, could add support for (as a list view):
-  - Newest
-  - Title
-  - Author
-  - Languages
-  - Publisher
-  - Tags
 - Currently files are only downloaded as epub/zip, we need to add:
   - MIMETYPE to file extension library
   - (Does this matter? The intent is sent with the MIMETYPE, is a file extension forced in reader apps?)
