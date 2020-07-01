@@ -29,7 +29,4 @@ This application is solely used for visual appeal and offline library viewing.
 - Currently files are only downloaded as epub/zip, we need to add:
   - MIMETYPE to file extension library
   - (Does this matter? The intent is sent with the MIMETYPE, is a file extension forced in reader apps?)
-- A download queue is needed
-  - Will enable us to add mass downloading
-  - Also need to add mass deleting when we add this
 - Backup/Restore functionality
