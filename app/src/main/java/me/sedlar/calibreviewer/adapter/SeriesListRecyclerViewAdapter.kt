@@ -1,6 +1,7 @@
 package me.sedlar.calibreviewer.adapter
 
 import android.content.Intent
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
@@ -13,6 +14,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
+import com.folioreader.Config
+import com.folioreader.FolioReader
+import com.folioreader.model.locators.ReadLocator
+import com.folioreader.util.AppUtil
 import me.sedlar.calibre.opds.OPDSConnector
 import me.sedlar.calibre.opds.model.OPDSAcquisition
 import me.sedlar.calibre.opds.model.OPDSSeriesEntry
@@ -21,6 +26,7 @@ import me.sedlar.calibreviewer.holder.SeriesHolder
 import me.sedlar.calibreviewer.task.AcquisitionDownloadTask
 import me.sedlar.calibreviewer.task.ImageDecodeTask
 import java.io.File
+import java.nio.file.Files
 
 
 class SeriesListRecyclerViewAdapter(
@@ -32,8 +38,27 @@ class SeriesListRecyclerViewAdapter(
     private var selectMode = false
     private val selected = ArrayList<OPDSSeriesEntry>()
 
+    private val reader = FolioReader.get()
+
+    private var lastSelectedEntry: OPDSSeriesEntry? = null
+
+    private fun getEntryLocationFile(entry: OPDSSeriesEntry): File {
+        return File(holder.lib.dataDir, "locations/${entry.uuid}.json")
+    }
+
     init {
         println("SeriesListRecyclerViewAdapter[size=${itemCount}]")
+
+        // Setup location saver
+        reader.setReadLocatorListener { locator ->
+            lastSelectedEntry?.let { entry ->
+                val locFile = getEntryLocationFile(entry)
+                val locatorJson = locator.toJson()!!
+                locFile.parentFile?.mkdirs()
+                Files.write(locFile.toPath(), locatorJson.toByteArray())
+                println("saveReadLocator -> $locatorJson")
+            }
+        }
     }
 
     fun onBack(): Boolean {
@@ -59,12 +84,13 @@ class SeriesListRecyclerViewAdapter(
 
                     selected.forEach { entry ->
                         entry.acquisitions.forEach { acquisition ->
-                            holder.lib.getAcquisitionFile(holder.series, entry, acquisition).let { acqFile ->
-                                if (!acqFile.exists()) {
-                                    dlCount++
-                                    handleAcquisitionDownload(entry, acquisition.fileExtension)
+                            holder.lib.getAcquisitionFile(holder.series, entry, acquisition)
+                                .let { acqFile ->
+                                    if (!acqFile.exists()) {
+                                        dlCount++
+                                        handleAcquisitionDownload(entry, acquisition.fileExtension)
+                                    }
                                 }
-                            }
                         }
                     }
 
@@ -89,11 +115,12 @@ class SeriesListRecyclerViewAdapter(
 
                     selected.forEach { entry ->
                         entry.acquisitions.forEach { acquisition ->
-                            holder.lib.getAcquisitionFile(holder.series, entry, acquisition)?.let { acqFile ->
-                                if (acqFile.exists()) {
-                                    acqFile.delete()
+                            holder.lib.getAcquisitionFile(holder.series, entry, acquisition)
+                                .let { acqFile ->
+                                    if (acqFile.exists()) {
+                                        acqFile.delete()
+                                    }
                                 }
-                            }
                         }
                     }
 
@@ -126,7 +153,8 @@ class SeriesListRecyclerViewAdapter(
     }
 
     override fun onCreateViewHolder(viewGroup: ViewGroup, type: Int): ItemViewHolder {
-        val view: View = LayoutInflater.from(viewGroup.context).inflate(R.layout.item_series_entry, viewGroup, false)
+        val view: View = LayoutInflater.from(viewGroup.context)
+            .inflate(R.layout.item_series_entry, viewGroup, false)
         return ItemViewHolder(view)
     }
 
@@ -138,7 +166,8 @@ class SeriesListRecyclerViewAdapter(
         ImageDecodeTask(thumbnail, userDefinedThumbnail).execute(viewHolder.imgCover)
 
         viewHolder.lblEntryTitle?.text = toTitleName(entry.title)
-        viewHolder.lblEntryTitle?.visibility = if (activity.isShowingTitles()) View.VISIBLE else View.GONE
+        viewHolder.lblEntryTitle?.visibility =
+            if (activity.isShowingTitles()) View.VISIBLE else View.GONE
         viewHolder.selectBackground?.visibility =
             if (selectMode && selected.contains(entry)) View.VISIBLE else View.GONE
 
@@ -181,7 +210,11 @@ class SeriesListRecyclerViewAdapter(
 
 
                             else -> {
-                                Toast.makeText(view.context, "Unsupported action: $selection", Toast.LENGTH_LONG)
+                                Toast.makeText(
+                                    view.context,
+                                    "Unsupported action: $selection",
+                                    Toast.LENGTH_LONG
+                                )
                             }
                         }
                     }
@@ -247,21 +280,53 @@ class SeriesListRecyclerViewAdapter(
     private fun handleAcquisitionOpen(entry: OPDSSeriesEntry, fileExtension: String) {
         entry.acquisitions.firstOrNull { it.fileExtension == fileExtension }?.let { acquisition ->
             holder.lib.getAcquisitionFile(holder.series, entry, acquisition).let { file ->
-                val fileURI = FileProvider.getUriForFile(
-                    activity.applicationContext,
-                    BuildConfig.APPLICATION_ID + ".provider",
-                    file
-                )
+                lastSelectedEntry = entry
+                if (activity.isExternalReader()) {
+                    println("Using external reader...")
 
-                val shareIntent = Intent()
+                    val fileURI = FileProvider.getUriForFile(
+                        activity.applicationContext,
+                        BuildConfig.APPLICATION_ID + ".provider",
+                        file
+                    )
 
-                shareIntent.action = Intent.ACTION_VIEW
-                shareIntent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    val shareIntent = Intent()
 
-                shareIntent.setDataAndType(fileURI, acquisition.type)
-                shareIntent.putExtra(Intent.EXTRA_STREAM, fileURI)
+                    shareIntent.action = Intent.ACTION_VIEW
+                    shareIntent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
 
-                activity.startActivity(Intent.createChooser(shareIntent, "Open eBook"))
+                    shareIntent.setDataAndType(fileURI, acquisition.type)
+                    shareIntent.putExtra(Intent.EXTRA_STREAM, fileURI)
+
+                    activity.startActivity(Intent.createChooser(shareIntent, "Open eBook"))
+                } else {
+                    println("Using internal reader...")
+
+                    val locFile = getEntryLocationFile(entry)
+
+                    if (locFile.exists()) {
+                        println("Using previous location...")
+                        reader.setReadLocator(ReadLocator.fromJson(locFile.readText()))
+                    } else {
+                        println("Location marker does not exist: ${locFile.absolutePath}")
+                    }
+
+                    var config = AppUtil.getSavedConfig(activity.applicationContext)
+
+                    if (config == null) {
+                        config = Config()
+                    }
+
+                    config.setThemeColorInt(Color.parseColor("#448AFF"))
+                    config.setNightThemeColorInt(Color.parseColor("#FFFFFF"))
+                    config.isNightMode = true
+                    config.allowedDirection = Config.AllowedDirection.VERTICAL_AND_HORIZONTAL
+                    config.fontSize = 2
+
+                    reader
+                        .setConfig(config, true)
+                        .openBook(file.absolutePath)
+                }
             }
         }
     }
@@ -283,7 +348,7 @@ class SeriesListRecyclerViewAdapter(
 
     private fun downloadAcquisition(entry: OPDSSeriesEntry, acquisition: OPDSAcquisition) {
         val title = "${holder.series.name} - ${entry.title} (${acquisition.fileExtension})"
-        
+
         println("Downloading $title")
         doToast("Downloading $title...", Toast.LENGTH_LONG)
 

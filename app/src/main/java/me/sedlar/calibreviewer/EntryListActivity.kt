@@ -102,6 +102,16 @@ class EntryListActivity : AppCompatActivity() {
             }
         }
 
+        // Add external reader handler
+        menu?.findItem(R.id.action_external_reader)?.let { menuItem ->
+            menuItem.isChecked = isExternalReader()
+            menuItem.setOnMenuItemClickListener {
+                it.isChecked = !it.isChecked
+                setExternalReader(it.isChecked)
+                true
+            }
+        }
+
         return true
     }
 
@@ -168,6 +178,14 @@ class EntryListActivity : AppCompatActivity() {
     private fun setTitleVisibility(visible: Boolean) {
         sharedPrefs.edit().putBoolean(KEY_SHOW_TITLES, visible).apply()
         libGrid?.redraw()
+    }
+
+    fun isExternalReader(): Boolean {
+        return sharedPrefs.getBoolean(KEY_EXTERNAL_READER, false)
+    }
+
+    private fun setExternalReader(external: Boolean) {
+        sharedPrefs.edit().putBoolean(KEY_EXTERNAL_READER, external).apply()
     }
 
     fun setProgressLabel(text: String) {

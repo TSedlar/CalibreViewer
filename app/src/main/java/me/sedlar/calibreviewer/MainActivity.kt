@@ -29,6 +29,7 @@ internal const val KEY_PASS = "KEY_PASS"
 internal const val KEY_LAST_LIB = "KEY_LAST_LIB"
 internal const val KEY_CACHE_MODE = "KEY_CACHE_MODE"
 internal const val KEY_SHOW_TITLES = "KEY_HIDE_TITLES"
+internal const val KEY_EXTERNAL_READER = "KEY_EXTERNAL_READER"
 
 
 class MainActivity : AppCompatActivity() {
