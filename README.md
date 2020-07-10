@@ -6,7 +6,7 @@
 
 <b>A mobile application used to view and download a Calibre library</b>
 
-An internal [fork](https://github.com/TSedlar/FolioReader-Android) of [FolioReader](https://github.com/FolioReader/FolioReader-Android) is included for a FOSS option of reading eBooks.
+An [fork](https://github.com/TSedlar/FolioReader-Android) of [FolioReader](https://github.com/FolioReader/FolioReader-Android) is included for a FOSS option of reading eBooks.
 
 An external reader, such as Moon+ Reader, can optionally be used instead.
 
