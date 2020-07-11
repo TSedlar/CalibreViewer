@@ -11,6 +11,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.cardview.widget.CardView
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
@@ -41,6 +42,15 @@ class SeriesListRecyclerViewAdapter(
     private val reader = FolioReader.get()
 
     private var lastSelectedEntry: OPDSSeriesEntry? = null
+
+    private val filteredEntries: List<OPDSSeriesEntry>
+        get() {
+            return if (activity.isShowingRead()) {
+                holder.series.entries
+            } else {
+                activity.getUnreadEntries(holder.series)
+            }
+        }
 
     private fun getEntryLocationFile(entry: OPDSSeriesEntry): File {
         return File(holder.lib.dataDir, "locations/${entry.uuid}.json")
@@ -78,29 +88,7 @@ class SeriesListRecyclerViewAdapter(
             // Add download handler
             menu?.findItem(R.id.action_download)?.let { menuItem ->
                 menuItem.setOnMenuItemClickListener {
-                    clearSelections(true)
-
-                    var dlCount = 0
-
-                    selected.forEach { entry ->
-                        entry.acquisitions.forEach { acquisition ->
-                            holder.lib.getAcquisitionFile(holder.series, entry, acquisition)
-                                .let { acqFile ->
-                                    if (!acqFile.exists()) {
-                                        dlCount++
-                                        handleAcquisitionDownload(entry, acquisition.fileExtension)
-                                    }
-                                }
-                        }
-                    }
-
-                    if (dlCount > 0) {
-                        doToast("Starting downloads...", Toast.LENGTH_LONG)
-                    } else {
-                        doToast("Files already downloaded!", Toast.LENGTH_SHORT)
-                    }
-
-                    selected.clear()
+                    downloadSelections()
 
                     true
                 }
@@ -109,25 +97,24 @@ class SeriesListRecyclerViewAdapter(
             // Add delete handler
             menu?.findItem(R.id.action_delete)?.let { menuItem ->
                 menuItem.setOnMenuItemClickListener {
-                    doToast("Deleting selections...", Toast.LENGTH_LONG)
+                    deleteSelections()
 
-                    clearSelections(true)
+                    true
+                }
+            }
 
-                    selected.forEach { entry ->
-                        entry.acquisitions.forEach { acquisition ->
-                            holder.lib.getAcquisitionFile(holder.series, entry, acquisition)
-                                .let { acqFile ->
-                                    if (acqFile.exists()) {
-                                        acqFile.delete()
-                                    }
-                                }
-                        }
-                    }
+            // Add mark read handler
+            menu?.findItem(R.id.action_mark_read)?.let { menuItem ->
+                menuItem.setOnMenuItemClickListener {
+                    markSelectionsRead()
+                    true
+                }
+            }
 
-                    selected.clear()
-
-                    doToast("Selections deleted!", Toast.LENGTH_SHORT)
-
+            // Add mark unread handler
+            menu?.findItem(R.id.action_mark_unread)?.let { menuItem ->
+                menuItem.setOnMenuItemClickListener {
+                    markSelectionsUnread()
                     true
                 }
             }
@@ -136,9 +123,17 @@ class SeriesListRecyclerViewAdapter(
             menu?.findItem(R.id.action_select_all)?.let { menuItem ->
                 menuItem.setOnMenuItemClickListener {
                     selected.clear()
-                    selected.addAll(holder.series.entries)
+                    selected.addAll(filteredEntries)
                     parent.redraw()
 
+                    true
+                }
+            }
+
+            // Add cancel handler
+            menu?.findItem(R.id.action_cancel)?.let { menuItem ->
+                menuItem.setOnMenuItemClickListener {
+                    clearSelections(false)
                     true
                 }
             }
@@ -159,7 +154,7 @@ class SeriesListRecyclerViewAdapter(
     }
 
     override fun onBindViewHolder(viewHolder: ItemViewHolder, position: Int) {
-        val entry = holder.series.entries[position]
+        val entry = filteredEntries[position]
         val thumbnail = holder.lib.getThumbFile(holder.series, entry)
         val userDefinedThumbnail = File(thumbnail, "../cover.jpg")
 
@@ -168,8 +163,14 @@ class SeriesListRecyclerViewAdapter(
         viewHolder.lblEntryTitle?.text = toTitleName(entry.title)
         viewHolder.lblEntryTitle?.visibility =
             if (activity.isShowingTitles()) View.VISIBLE else View.GONE
-        viewHolder.selectBackground?.visibility =
-            if (selectMode && selected.contains(entry)) View.VISIBLE else View.GONE
+
+        if (selectMode && selected.contains(entry)) {
+            viewHolder.selectBackground?.visibility = View.VISIBLE
+            viewHolder.selectBackground?.setCardBackgroundColor(Color.parseColor("#4DFFFFFF"))
+        } else if (activity.isEntryRead(entry)) {
+            viewHolder.selectBackground?.visibility = View.VISIBLE
+            viewHolder.selectBackground?.setCardBackgroundColor(Color.parseColor("#99131313"))
+        }
 
         viewHolder.itemView.setOnLongClickListener {
             println("Enabled multiselect mode")
@@ -228,7 +229,64 @@ class SeriesListRecyclerViewAdapter(
     }
 
     override fun getItemCount(): Int {
-        return holder.series.entries.size
+        return filteredEntries.size
+    }
+
+    private fun downloadSelections() {
+        clearSelections(true)
+
+        var dlCount = 0
+
+        selected.forEach { entry ->
+            entry.acquisitions.forEach { acquisition ->
+                holder.lib.getAcquisitionFile(holder.series, entry, acquisition)
+                    .let { acqFile ->
+                        if (!acqFile.exists()) {
+                            dlCount++
+                            handleAcquisitionDownload(entry, acquisition.fileExtension)
+                        }
+                    }
+            }
+        }
+
+        if (dlCount > 0) {
+            doToast("Starting downloads...", Toast.LENGTH_LONG)
+        } else {
+            doToast("Files already downloaded!", Toast.LENGTH_SHORT)
+        }
+
+        selected.clear()
+    }
+
+    private fun deleteSelections() {
+        doToast("Deleting selections...", Toast.LENGTH_LONG)
+
+        clearSelections(true)
+
+        selected.forEach { entry ->
+            entry.acquisitions.forEach { acquisition ->
+                holder.lib.getAcquisitionFile(holder.series, entry, acquisition)
+                    .let { acqFile ->
+                        if (acqFile.exists()) {
+                            acqFile.delete()
+                        }
+                    }
+            }
+        }
+
+        selected.clear()
+
+        doToast("Selections deleted!", Toast.LENGTH_SHORT)
+    }
+
+    private fun markSelectionsRead() {
+        activity.markRead(*selected.toTypedArray())
+        clearSelections()
+    }
+
+    private fun markSelectionsUnread() {
+        activity.markUnread(*selected.toTypedArray())
+        clearSelections()
     }
 
     private fun clearSelections(visualOnly: Boolean = false) {
@@ -249,6 +307,7 @@ class SeriesListRecyclerViewAdapter(
 
         viewHolder.selectBackground?.visibility =
             if (selectMode && selected.contains(entry)) View.VISIBLE else View.GONE
+        viewHolder.selectBackground?.setCardBackgroundColor(Color.parseColor("#4DFFFFFF"))
     }
 
     private fun generateActionList(entry: OPDSSeriesEntry): List<String> {
@@ -324,7 +383,7 @@ class SeriesListRecyclerViewAdapter(
                     config.fontSize = 2
 
                     reader
-                        .setConfig(config, true)
+                        .setConfig(config, false)
                         .openBook(file.absolutePath)
                 }
             }
@@ -379,7 +438,7 @@ class SeriesListRecyclerViewAdapter(
 
     inner class ItemViewHolder(itemView: View) : ViewHolder(itemView) {
 
-        val selectBackground: View? = itemView.findViewById(R.id.selectBackground)
+        val selectBackground: CardView? = itemView.findViewById(R.id.selectBackground)
         val imgCover: ImageView? = itemView.findViewById(R.id.imgCover)
         val lblEntryTitle: TextView? = itemView.findViewById(R.id.lblEntryTitle)
     }

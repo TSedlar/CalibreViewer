@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import me.sedlar.calibre.opds.local.OPDSLibrary
 import me.sedlar.calibre.opds.local.OPDSSeries
+import me.sedlar.calibre.opds.model.OPDSSeriesEntry
 import me.sedlar.calibreviewer.adapter.SeriesListRecyclerViewAdapter
 import me.sedlar.calibreviewer.holder.SeriesHolder
 import me.sedlar.calibreviewer.task.AcquisitionDownloadTask
@@ -98,6 +99,17 @@ class EntryListActivity : AppCompatActivity() {
             menuItem.setOnMenuItemClickListener {
                 it.isChecked = !it.isChecked
                 setTitleVisibility(it.isChecked)
+                true
+            }
+        }
+
+        // Add show read handler
+        menu?.findItem(R.id.action_show_read)?.let { menuItem ->
+            menuItem.isChecked = isShowingRead()
+            menuItem.setOnMenuItemClickListener {
+                it.isChecked = !it.isChecked
+                setShowRead(it.isChecked)
+                libGrid?.redraw()
                 true
             }
         }
@@ -186,6 +198,53 @@ class EntryListActivity : AppCompatActivity() {
 
     private fun setExternalReader(external: Boolean) {
         sharedPrefs.edit().putBoolean(KEY_EXTERNAL_READER, external).apply()
+    }
+
+    fun isShowingRead(): Boolean {
+        return sharedPrefs.getBoolean(KEY_SHOW_READ, true)
+    }
+
+    private fun setShowRead(external: Boolean) {
+        sharedPrefs.edit().putBoolean(KEY_SHOW_READ, external).apply()
+    }
+
+    fun markRead(vararg entries: OPDSSeriesEntry) {
+        val currEntries = HashSet<String>()
+        if (sharedPrefs.contains(KEY_READ_ENTRIES)) {
+            currEntries.addAll(sharedPrefs.getStringSet(KEY_READ_ENTRIES, emptySet())!!.toTypedArray())
+        }
+        entries.forEach { currEntries.add(it.uuid) }
+        sharedPrefs.edit().putStringSet(KEY_READ_ENTRIES, currEntries).apply()
+    }
+
+    fun markUnread(vararg entries: OPDSSeriesEntry) {
+        val currEntries = HashSet<String>()
+        if (sharedPrefs.contains(KEY_READ_ENTRIES)) {
+            currEntries.addAll(sharedPrefs.getStringSet(KEY_READ_ENTRIES, emptySet())!!.toTypedArray())
+        }
+        entries.forEach { currEntries.remove(it.uuid) }
+        sharedPrefs.edit().putStringSet(KEY_READ_ENTRIES, currEntries).apply()
+    }
+
+    fun isEntryRead(entry: OPDSSeriesEntry): Boolean {
+        if (sharedPrefs.contains(KEY_READ_ENTRIES)) {
+            return sharedPrefs.getStringSet(KEY_READ_ENTRIES, emptySet())!!.contains(entry.uuid)
+        }
+        return false
+    }
+
+    fun getReadEntryIds(): Set<String> {
+        return sharedPrefs.getStringSet(KEY_READ_ENTRIES, emptySet())!!
+    }
+
+    fun getReadEntries(series: OPDSSeries): List<OPDSSeriesEntry> {
+        val readIds = getReadEntryIds()
+        return series.entries.filter { readIds.contains(it.uuid) }
+    }
+
+    fun getUnreadEntries(series: OPDSSeries): List<OPDSSeriesEntry> {
+        val readIds = getReadEntryIds()
+        return series.entries.filter { !readIds.contains(it.uuid) }
     }
 
     fun setProgressLabel(text: String) {

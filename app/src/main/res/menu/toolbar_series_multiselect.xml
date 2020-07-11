@@ -18,11 +18,35 @@
           android:titleCondensed="true">
     </item>
 
+    <item android:id="@+id/action_mark_read"
+        android:orderInCategory="101"
+        app:showAsAction="ifRoom"
+        android:icon="@drawable/ic_read"
+        android:title="Mark Read"
+        android:titleCondensed="true">
+    </item>
+
+    <item android:id="@+id/action_mark_unread"
+        android:orderInCategory="101"
+        app:showAsAction="ifRoom"
+        android:icon="@drawable/ic_unread"
+        android:title="Mark Unread"
+        android:titleCondensed="true">
+    </item>
+
     <item android:id="@+id/action_select_all"
           android:orderInCategory="101"
           app:showAsAction="ifRoom"
           android:icon="@drawable/ic_select_all"
           android:title="Select All"
           android:titleCondensed="true">
+    </item>
+
+    <item android:id="@+id/action_cancel"
+        android:orderInCategory="101"
+        app:showAsAction="ifRoom"
+        android:icon="@drawable/ic_cancel"
+        android:title="Cancel"
+        android:titleCondensed="true">
     </item>
 </menu>

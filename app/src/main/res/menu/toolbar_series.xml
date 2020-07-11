@@ -23,6 +23,12 @@
                   android:checkable="true"
                   android:checked="true"/>
 
+            <item android:id="@+id/action_show_read"
+                app:showAsAction="ifRoom"
+                android:title="Show Read"
+                android:checkable="true"
+                android:checked="true"/>
+
             <item android:id="@+id/action_external_reader"
                 app:showAsAction="ifRoom"
                 android:title="External Reader"
