@@ -374,16 +374,17 @@ class SeriesListRecyclerViewAdapter(
 
                     if (config == null) {
                         config = Config()
+                        config.isNightMode = true
+                        config.fontSize = 2
                     }
 
                     config.setThemeColorInt(Color.parseColor("#448AFF"))
                     config.setNightThemeColorInt(Color.parseColor("#FFFFFF"))
-                    config.isNightMode = true
                     config.allowedDirection = Config.AllowedDirection.VERTICAL_AND_HORIZONTAL
-                    config.fontSize = 2
+                    config.isShowRemainingIndicator = true
 
                     reader
-                        .setConfig(config, false)
+                        .setConfig(config, true)
                         .openBook(file.absolutePath)
                 }
             }
