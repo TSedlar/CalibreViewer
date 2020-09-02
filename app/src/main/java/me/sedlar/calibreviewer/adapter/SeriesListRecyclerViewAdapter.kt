@@ -130,6 +130,22 @@ class SeriesListRecyclerViewAdapter(
                 }
             }
 
+            // Add select before handler
+            menu?.findItem(R.id.action_select_before)?.let { menuItem ->
+                menuItem.setOnMenuItemClickListener {
+                    selectBefore()
+                    true
+                }
+            }
+
+            // Add select after handler
+            menu?.findItem(R.id.action_select_after)?.let { menuItem ->
+                menuItem.setOnMenuItemClickListener {
+                    selectAfter()
+                    true
+                }
+            }
+
             // Add cancel handler
             menu?.findItem(R.id.action_cancel)?.let { menuItem ->
                 menuItem.setOnMenuItemClickListener {
@@ -310,6 +326,33 @@ class SeriesListRecyclerViewAdapter(
         viewHolder.selectBackground?.setCardBackgroundColor(Color.parseColor("#4DFFFFFF"))
     }
 
+    private fun selectBefore() {
+        val lastSelected =
+            selected.sortedBy { filteredEntries.indexOf(it) }.lastOrNull()
+        if (lastSelected != null) {
+            val lastSelectedIndex = filteredEntries.indexOf(lastSelected)
+            selected.clear()
+            selected.addAll(filteredEntries.subList(0, lastSelectedIndex + 1))
+            parent.redraw()
+        }
+    }
+
+    private fun selectAfter() {
+        val lastSelected =
+            selected.sortedBy { filteredEntries.indexOf(it) }.lastOrNull()
+        if (lastSelected != null) {
+            val lastSelectedIndex = filteredEntries.indexOf(lastSelected)
+            selected.clear()
+            selected.addAll(
+                filteredEntries.subList(
+                    lastSelectedIndex,
+                    filteredEntries.size
+                )
+            )
+            parent.redraw()
+        }
+    }
+
     private fun generateActionList(entry: OPDSSeriesEntry): List<String> {
         val actions = ArrayList<String>()
 
@@ -340,7 +383,14 @@ class SeriesListRecyclerViewAdapter(
         entry.acquisitions.firstOrNull { it.fileExtension == fileExtension }?.let { acquisition ->
             holder.lib.getAcquisitionFile(holder.series, entry, acquisition).let { file ->
                 lastSelectedEntry = entry
-                if (activity.isExternalReader()) {
+
+                val internalButNotEpub = !activity.isExternalReader() && file.extension != "epub"
+
+                if (internalButNotEpub) {
+                    doToast("Internal reader supports epub only", Toast.LENGTH_SHORT)
+                }
+
+                if (activity.isExternalReader() || internalButNotEpub) {
                     println("Using external reader...")
 
                     val fileURI = FileProvider.getUriForFile(

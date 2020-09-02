@@ -8,9 +8,13 @@ import me.sedlar.calibre.opds.OPDSParser
 import me.sedlar.calibre.opds.local.OPDSLibrary
 import me.sedlar.calibreviewer.MainActivity
 import me.sedlar.calibreviewer.hasNetworkConnection
+import me.sedlar.calibreviewer.util.await
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 
 typealias LibTaskCallback = (List<OPDSLibrary>) -> Unit
 
@@ -40,32 +44,48 @@ class LibraryParseTask(private val activity: MainActivity, private val onFinish:
 
         val libs = parser.parse()
 
+        println("Parsed XML!")
+
         libs.forEach { lib ->
             activity.setProgressLabel("Cleaning Cache...")
             lib.cleanCache()
             activity.setProgressLabel("Cache Cleaned!")
 
-            lib.seriesList.forEach { series ->
-                series.entries.firstOrNull()?.let { firstEntry ->
-                    // Download and resize thumbnail for series view
-                    val thumbFile = lib.getThumbFile(series, firstEntry)
-                    if (!thumbFile.exists()) {
-                        activity.setProgressLabel("Downloading thumbnail... \n\n ${series.name}")
-                        val thumb = lib.getThumbURL(firstEntry.cover)
-                        lib.downloadAsBytes(thumb)?.let { thumbData ->
-                            activity.setProgressLabel("Resizing thumbnail... \n\n ${series.name}")
-                            ByteArrayInputStream(thumbData).use { input ->
-                                val bitmap = BitmapFactory.decodeStream(input)
-                                val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 400, 600, false)
-                                thumbFile.parentFile?.mkdirs()
-                                FileOutputStream(thumbFile).use { output ->
-                                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, output)
+            activity.setProgressPercent(100.0)
+
+            val progressMax = lib.seriesList.size
+            var progress = 0
+
+            lib.seriesList.map { series ->
+                Callable {
+                    series.entries.firstOrNull()?.let { firstEntry ->
+                        // Download and resize thumbnail for series view
+                        val thumbFile = lib.getThumbFile(series, firstEntry)
+                        if (!thumbFile.exists()) {
+                            activity.setProgressLabel("Downloading thumbnail... \n\n ${series.name}")
+                            val thumb = lib.getThumbURL(firstEntry.cover)
+                            lib.downloadAsBytes(thumb)?.let { thumbData ->
+                                activity.setProgressLabel("Resizing thumbnail... \n\n ${series.name}")
+                                ByteArrayInputStream(thumbData).use { input ->
+                                    val bitmap = BitmapFactory.decodeStream(input)
+                                    val resizedBitmap =
+                                        Bitmap.createScaledBitmap(bitmap, 400, 600, false)
+                                    thumbFile.parentFile?.mkdirs()
+                                    FileOutputStream(thumbFile).use { output ->
+                                        resizedBitmap.compress(
+                                            Bitmap.CompressFormat.JPEG,
+                                            100,
+                                            output
+                                        )
+                                        progress++
+                                        activity.setProgressPercent((progress.toDouble() / progressMax.toDouble()) * 100.0)
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
+            }.await(10)
         }
 
         if (forceNetwork) {

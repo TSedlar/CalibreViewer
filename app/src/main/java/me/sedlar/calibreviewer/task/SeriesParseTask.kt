@@ -10,8 +10,10 @@ import me.sedlar.calibre.opds.model.OPDSSeriesEntry
 import me.sedlar.calibreviewer.EntryListActivity
 import me.sedlar.calibreviewer.hasNetworkConnection
 import me.sedlar.calibreviewer.holder.SeriesHolder
+import me.sedlar.calibreviewer.util.await
 import java.io.ByteArrayInputStream
 import java.io.FileOutputStream
+import java.util.concurrent.Callable
 
 typealias SeriesTaskCallback = () -> Unit
 
@@ -20,9 +22,16 @@ class SeriesParseTask(private val activity: EntryListActivity, private val onFin
 
     override fun doInBackground(vararg params: SeriesHolder) {
         params.firstOrNull()?.let { holder ->
-            holder.series.entries.forEach { entry ->
-                downloadThumbnail(holder.lib, holder.series, entry)
-            }
+            val progressMax = holder.series.entries.size
+            var progress = 0
+
+            holder.series.entries.map { entry ->
+                Callable {
+                    downloadThumbnail(holder.lib, holder.series, entry)
+                    progress++
+                    activity.setProgressPercent((progress.toDouble() / progressMax.toDouble()) * 100.0)
+                }
+            }.await(4)
         }
     }
 

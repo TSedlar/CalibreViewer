@@ -19,12 +19,25 @@
             android:text="Content is filtered"
             android:visibility="gone"/>
 
+    <TextView
+        android:id="@+id/lblProgressPercent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/progressIndicator"
+        android:layout_centerInParent="true"
+        android:layout_marginTop="10dp"
+        android:text="0%"
+        android:textAlignment="center"
+        android:textSize="16sp" />
+
     <ProgressBar
-            android:id="@+id/progressIndicator"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:indeterminate="true"
-            android:layout_centerInParent="true"/>
+        android:id="@+id/progressIndicator"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:layout_centerInParent="true"
+        android:layout_marginStart="48sp"
+        android:indeterminate="false" />
 
     <TextView
             android:id="@+id/lblProgress"

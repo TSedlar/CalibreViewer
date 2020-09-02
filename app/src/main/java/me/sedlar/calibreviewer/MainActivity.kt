@@ -1,5 +1,6 @@
 package me.sedlar.calibreviewer
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.text.InputType
 import android.view.Menu
@@ -20,6 +21,7 @@ import me.sedlar.calibreviewer.task.LibraryParseTask
 import me.sedlar.calibreviewer.util.SeriesFilter
 import me.sedlar.calibreviewer.util.matchesQuery
 import java.io.File
+import kotlin.math.ceil
 
 
 internal const val KEY_IP = "KEY_IP"
@@ -248,7 +250,12 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?,
+                        view: View?,
+                        position: Int,
+                        id: Long
+                    ) {
                         library = position
 
                         println("Selected Library: ${libraries[library!!].name} [$library]")
@@ -263,6 +270,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
+        }
+
+        // Remove progress text
+        findViewById<TextView>(R.id.lblProgressPercent)?.let {
+            (it.parent as ViewGroup).removeView(it)
         }
 
         // Remove progress indicator
@@ -346,9 +358,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
+    fun setProgressPercent(percent: Double) {
+        runOnUiThread {
+            // Set progress text
+            findViewById<TextView>(R.id.lblProgressPercent)?.let {
+                it.text = "${ceil(percent).toInt()}%"
+            }
+            // Set bar progress
+            findViewById<ProgressBar>(R.id.progressIndicator)?.setProgress(
+                ceil(percent).toInt(),
+                true
+            )
+        }
+    }
+
     private fun checkSettings(): Boolean {
         val prefs = sharedPrefs
-        return prefs.contains(KEY_IP) && prefs.contains(KEY_PORT) && prefs.contains(KEY_USER) && prefs.contains(KEY_PASS)
+        return prefs.contains(KEY_IP) && prefs.contains(KEY_PORT) && prefs.contains(KEY_USER) && prefs.contains(
+            KEY_PASS
+        )
     }
 
     fun isShowingTitles(): Boolean {

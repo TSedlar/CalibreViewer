@@ -42,6 +42,22 @@
           android:titleCondensed="true">
     </item>
 
+    <item android:id="@+id/action_select_before"
+        android:orderInCategory="101"
+        app:showAsAction="ifRoom"
+        android:icon="@drawable/ic_select_before"
+        android:title="Select Before"
+        android:titleCondensed="true">
+    </item>
+
+    <item android:id="@+id/action_select_after"
+        android:orderInCategory="101"
+        app:showAsAction="ifRoom"
+        android:icon="@drawable/ic_select_after"
+        android:title="Select After"
+        android:titleCondensed="true">
+    </item>
+
     <item android:id="@+id/action_cancel"
         android:orderInCategory="101"
         app:showAsAction="ifRoom"

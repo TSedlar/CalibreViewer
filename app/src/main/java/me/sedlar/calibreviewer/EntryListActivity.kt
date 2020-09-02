@@ -1,5 +1,6 @@
 package me.sedlar.calibreviewer
 
+import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.Intent
 import android.content.IntentFilter
@@ -21,6 +22,7 @@ import me.sedlar.calibreviewer.adapter.SeriesListRecyclerViewAdapter
 import me.sedlar.calibreviewer.holder.SeriesHolder
 import me.sedlar.calibreviewer.task.AcquisitionDownloadTask
 import me.sedlar.calibreviewer.task.SeriesParseTask
+import kotlin.math.ceil
 
 
 class EntryListActivity : AppCompatActivity() {
@@ -142,6 +144,11 @@ class EntryListActivity : AppCompatActivity() {
     }
 
     private fun setupSeriesList() {
+        // Remove progress text
+        findViewById<TextView>(R.id.lblProgressPercent)?.let {
+            (it.parent as ViewGroup).removeView(it)
+        }
+
         // Remove progress indicator
         findViewById<ProgressBar>(R.id.progressIndicator)?.let {
             (it.parent as ViewGroup).removeView(it)
@@ -252,6 +259,21 @@ class EntryListActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.lblProgress)?.let {
                 it.text = text
             }
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    fun setProgressPercent(percent: Double) {
+        runOnUiThread {
+            // Set progress text
+            findViewById<TextView>(R.id.lblProgressPercent)?.let {
+                it.text = "${ceil(percent).toInt()}%"
+            }
+            // Set bar progress
+            findViewById<ProgressBar>(R.id.progressIndicator)?.setProgress(
+                ceil(percent).toInt(),
+                true
+            )
         }
     }
 
