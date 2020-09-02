@@ -28,6 +28,8 @@ import me.sedlar.calibreviewer.task.AcquisitionDownloadTask
 import me.sedlar.calibreviewer.task.ImageDecodeTask
 import java.io.File
 import java.nio.file.Files
+import java.util.*
+import kotlin.collections.ArrayList
 
 
 class SeriesListRecyclerViewAdapter(
@@ -124,7 +126,10 @@ class SeriesListRecyclerViewAdapter(
                 menuItem.setOnMenuItemClickListener {
                     selected.clear()
                     selected.addAll(filteredEntries)
-                    parent.redraw()
+
+                    parent.redraw {
+                        scrollToUnread()
+                    }
 
                     true
                 }
@@ -186,6 +191,8 @@ class SeriesListRecyclerViewAdapter(
         } else if (activity.isEntryRead(entry)) {
             viewHolder.selectBackground?.visibility = View.VISIBLE
             viewHolder.selectBackground?.setCardBackgroundColor(Color.parseColor("#99131313"))
+        } else {
+            viewHolder.selectBackground?.visibility = View.GONE
         }
 
         viewHolder.itemView.setOnLongClickListener {
@@ -216,7 +223,7 @@ class SeriesListRecyclerViewAdapter(
 
                 bookDialog.setAdapter(arrayAdapter) { dialog, which ->
                     arrayAdapter.getItem(which)?.let { selection ->
-                        when (selection.toLowerCase()) {
+                        when (selection.toLowerCase(Locale.getDefault())) {
                             "download epub" -> handleAcquisitionDownload(entry, "epub")
                             "open epub" -> handleAcquisitionOpen(entry, "epub")
                             "delete epub" -> handleAcquisitionDelete(entry, "epub")
@@ -310,7 +317,11 @@ class SeriesListRecyclerViewAdapter(
         if (!visualOnly) {
             selected.clear()
         }
-        parent.redraw()
+
+        parent.redraw {
+            scrollToUnread()
+        }
+
         activity.invalidateOptionsMenu()
     }
 
@@ -333,7 +344,10 @@ class SeriesListRecyclerViewAdapter(
             val lastSelectedIndex = filteredEntries.indexOf(lastSelected)
             selected.clear()
             selected.addAll(filteredEntries.subList(0, lastSelectedIndex + 1))
-            parent.redraw()
+
+            parent.redraw {
+                parent.scrollToPosition(lastSelectedIndex)
+            }
         }
     }
 
@@ -349,7 +363,26 @@ class SeriesListRecyclerViewAdapter(
                     filteredEntries.size
                 )
             )
-            parent.redraw()
+            parent.redraw {
+                parent.scrollToPosition(filteredEntries.size)
+            }
+        }
+    }
+
+    fun getUnreadPosition(): Int? {
+        activity.getUnreadEntries(holder.series).firstOrNull()?.let { firstUnread ->
+            return filteredEntries.indexOf(firstUnread)
+        }
+        return null
+    }
+
+    fun scrollToUnread(smooth: Boolean = true) {
+        getUnreadPosition()?.let {
+            if (smooth) {
+                parent.smoothScrollToPosition(it)
+            } else {
+                parent.scrollToPosition(it)
+            }
         }
     }
 

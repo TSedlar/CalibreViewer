@@ -167,6 +167,8 @@ class EntryListActivity : AppCompatActivity() {
 
             libGridAdapter = SeriesListRecyclerViewAdapter(this, grid, SeriesHolder(library!!, series!!))
             grid.adapter = libGridAdapter
+
+            libGridAdapter?.scrollToUnread(false)
         }
     }
 
