@@ -14,6 +14,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import me.sedlar.calibre.opds.local.OPDSLibrary
 import me.sedlar.calibre.opds.local.OPDSSeries
@@ -48,7 +49,10 @@ class EntryListActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
-        registerReceiver(AcquisitionDownloadTask.RECEIVER, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+        registerReceiver(
+            AcquisitionDownloadTask.RECEIVER,
+            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        )
 
         setContentView(R.layout.activity_series_entries)
 
@@ -116,6 +120,17 @@ class EntryListActivity : AppCompatActivity() {
             }
         }
 
+        // Add grid handler
+        menu?.findItem(R.id.action_use_grid)?.let { menuItem ->
+            menuItem.isChecked = isGridAlways()
+            menuItem.setOnMenuItemClickListener {
+                it.isChecked = !it.isChecked
+                setGridAlways(it.isChecked)
+                restartActivity()
+                true
+            }
+        }
+
         // Add external reader handler
         menu?.findItem(R.id.action_external_reader)?.let { menuItem ->
             menuItem.isChecked = isExternalReader()
@@ -163,9 +178,22 @@ class EntryListActivity : AppCompatActivity() {
         findViewById<RecyclerView>(R.id.gridSeriesEntries)?.let { grid ->
             libGrid = grid
             grid.visibility = View.VISIBLE
-            grid.layoutManager = GridLayoutManager(this, calculateNoOfColumns(130F))
 
-            libGridAdapter = SeriesListRecyclerViewAdapter(this, grid, SeriesHolder(library!!, series!!))
+            val gridMode = series!!.entries.size <= MIN_LIST_VIEW_COUNT || isGridAlways()
+
+            if (gridMode) {
+                grid.layoutManager = GridLayoutManager(this, calculateNoOfColumns(130F))
+            } else {
+                grid.layoutManager = LinearLayoutManager(this)
+            }
+
+            libGridAdapter = SeriesListRecyclerViewAdapter(
+                this,
+                grid,
+                SeriesHolder(library!!, series!!),
+                gridView = gridMode
+            )
+
             grid.adapter = libGridAdapter
 
             libGridAdapter?.scrollToUnread(false)
@@ -217,10 +245,20 @@ class EntryListActivity : AppCompatActivity() {
         sharedPrefs.edit().putBoolean(KEY_SHOW_READ, external).apply()
     }
 
+    fun isGridAlways(): Boolean {
+        return sharedPrefs.getBoolean(KEY_GRID_ALWAYS, false)
+    }
+
+    private fun setGridAlways(always: Boolean) {
+        sharedPrefs.edit().putBoolean(KEY_GRID_ALWAYS, always).apply()
+    }
+
     fun markRead(vararg entries: OPDSSeriesEntry) {
         val currEntries = HashSet<String>()
         if (sharedPrefs.contains(KEY_READ_ENTRIES)) {
-            currEntries.addAll(sharedPrefs.getStringSet(KEY_READ_ENTRIES, emptySet())!!.toTypedArray())
+            currEntries.addAll(
+                sharedPrefs.getStringSet(KEY_READ_ENTRIES, emptySet())!!.toTypedArray()
+            )
         }
         entries.forEach { currEntries.add(it.uuid) }
         sharedPrefs.edit().putStringSet(KEY_READ_ENTRIES, currEntries).apply()
@@ -229,7 +267,9 @@ class EntryListActivity : AppCompatActivity() {
     fun markUnread(vararg entries: OPDSSeriesEntry) {
         val currEntries = HashSet<String>()
         if (sharedPrefs.contains(KEY_READ_ENTRIES)) {
-            currEntries.addAll(sharedPrefs.getStringSet(KEY_READ_ENTRIES, emptySet())!!.toTypedArray())
+            currEntries.addAll(
+                sharedPrefs.getStringSet(KEY_READ_ENTRIES, emptySet())!!.toTypedArray()
+            )
         }
         entries.forEach { currEntries.remove(it.uuid) }
         sharedPrefs.edit().putStringSet(KEY_READ_ENTRIES, currEntries).apply()

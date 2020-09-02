@@ -23,7 +23,6 @@ import me.sedlar.calibreviewer.util.matchesQuery
 import java.io.File
 import kotlin.math.ceil
 
-
 internal const val KEY_IP = "KEY_IP"
 internal const val KEY_PORT = "KEY_PORT"
 internal const val KEY_USER = "KEY_USER"
@@ -34,7 +33,9 @@ internal const val KEY_SHOW_TITLES = "KEY_HIDE_TITLES"
 internal const val KEY_SHOW_READ = "KEY_SHOW_READ"
 internal const val KEY_EXTERNAL_READER = "KEY_EXTERNAL_READER"
 internal const val KEY_READ_ENTRIES = "KEY_READ_ENTRIES"
+internal const val KEY_GRID_ALWAYS = "KEY_GRID_ALWAYS"
 
+internal const val MIN_LIST_VIEW_COUNT = 30
 
 class MainActivity : AppCompatActivity() {
 

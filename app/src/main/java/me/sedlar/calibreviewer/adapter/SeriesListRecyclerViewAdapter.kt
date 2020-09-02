@@ -35,7 +35,8 @@ import kotlin.collections.ArrayList
 class SeriesListRecyclerViewAdapter(
     private val activity: EntryListActivity,
     private val parent: RecyclerView,
-    private val holder: SeriesHolder
+    private val holder: SeriesHolder,
+    private val gridView: Boolean = true
 ) : RecyclerView.Adapter<SeriesListRecyclerViewAdapter.ItemViewHolder>() {
 
     private var selectMode = false
@@ -169,31 +170,21 @@ class SeriesListRecyclerViewAdapter(
     }
 
     override fun onCreateViewHolder(viewGroup: ViewGroup, type: Int): ItemViewHolder {
-        val view: View = LayoutInflater.from(viewGroup.context)
-            .inflate(R.layout.item_series_entry, viewGroup, false)
+        val view: View = if (gridView) {
+            LayoutInflater.from(viewGroup.context)
+                .inflate(R.layout.item_series_grid_entry, viewGroup, false)
+        } else {
+            LayoutInflater.from(viewGroup.context)
+                .inflate(R.layout.item_series_list_entry, viewGroup, false)
+        }
+
         return ItemViewHolder(view)
     }
 
     override fun onBindViewHolder(viewHolder: ItemViewHolder, position: Int) {
         val entry = filteredEntries[position]
-        val thumbnail = holder.lib.getThumbFile(holder.series, entry)
-        val userDefinedThumbnail = File(thumbnail, "../cover.jpg")
 
-        ImageDecodeTask(thumbnail, userDefinedThumbnail).execute(viewHolder.imgCover)
-
-        viewHolder.lblEntryTitle?.text = toTitleName(entry.title)
-        viewHolder.lblEntryTitle?.visibility =
-            if (activity.isShowingTitles()) View.VISIBLE else View.GONE
-
-        if (selectMode && selected.contains(entry)) {
-            viewHolder.selectBackground?.visibility = View.VISIBLE
-            viewHolder.selectBackground?.setCardBackgroundColor(Color.parseColor("#4DFFFFFF"))
-        } else if (activity.isEntryRead(entry)) {
-            viewHolder.selectBackground?.visibility = View.VISIBLE
-            viewHolder.selectBackground?.setCardBackgroundColor(Color.parseColor("#99131313"))
-        } else {
-            viewHolder.selectBackground?.visibility = View.GONE
-        }
+        viewHolder.handleBindView(entry)
 
         viewHolder.itemView.setOnLongClickListener {
             println("Enabled multiselect mode")
@@ -231,7 +222,6 @@ class SeriesListRecyclerViewAdapter(
                             "download zip" -> handleAcquisitionDownload(entry, "zip")
                             "open zip" -> handleAcquisitionOpen(entry, "zip")
                             "delete zip" -> handleAcquisitionDelete(entry, "zip")
-
 
                             else -> {
                                 Toast.makeText(
@@ -332,9 +322,7 @@ class SeriesListRecyclerViewAdapter(
             selected.add(entry)
         }
 
-        viewHolder.selectBackground?.visibility =
-            if (selectMode && selected.contains(entry)) View.VISIBLE else View.GONE
-        viewHolder.selectBackground?.setCardBackgroundColor(Color.parseColor("#4DFFFFFF"))
+        viewHolder.handleSelection(entry)
     }
 
     private fun selectBefore() {
@@ -376,7 +364,7 @@ class SeriesListRecyclerViewAdapter(
         return null
     }
 
-    fun scrollToUnread(smooth: Boolean = true) {
+    fun scrollToUnread(smooth: Boolean = false) {
         getUnreadPosition()?.let {
             if (smooth) {
                 parent.smoothScrollToPosition(it)
@@ -525,5 +513,71 @@ class SeriesListRecyclerViewAdapter(
         val selectBackground: CardView? = itemView.findViewById(R.id.selectBackground)
         val imgCover: ImageView? = itemView.findViewById(R.id.imgCover)
         val lblEntryTitle: TextView? = itemView.findViewById(R.id.lblEntryTitle)
+        val imgStatus: ImageView? = itemView.findViewById(R.id.imgStatus)
+
+        fun handleSelection(entry: OPDSSeriesEntry?) {
+            if (gridView) {
+                handleGridSelection(entry)
+            } else {
+                handleListSelection(entry)
+            }
+        }
+
+        private fun handleGridSelection(entry: OPDSSeriesEntry?) {
+            selectBackground?.visibility =
+                if (selectMode && selected.contains(entry)) View.VISIBLE else View.GONE
+            selectBackground?.setCardBackgroundColor(Color.parseColor("#4DFFFFFF"))
+        }
+
+        private fun handleListSelection(entry: OPDSSeriesEntry?) {
+            selectBackground?.visibility =
+                if (selectMode && selected.contains(entry)) View.VISIBLE else View.GONE
+            selectBackground?.setCardBackgroundColor(Color.parseColor("#4DFFFFFF"))
+        }
+
+        fun handleBindView(entry: OPDSSeriesEntry) {
+            if (gridView) {
+                handleBindGridView(entry)
+            } else {
+                handleBindListView(entry)
+            }
+        }
+
+        private fun handleBindGridView(entry: OPDSSeriesEntry) {
+            val thumbnail = holder.lib.getThumbFile(holder.series, entry)
+            val userDefinedThumbnail = File(thumbnail, "../cover.jpg")
+
+            ImageDecodeTask(thumbnail, userDefinedThumbnail).execute(imgCover)
+
+            lblEntryTitle?.text = toTitleName(entry.title)
+            lblEntryTitle?.visibility =
+                if (activity.isShowingTitles()) View.VISIBLE else View.GONE
+
+            handleSelectionBackground(entry)
+        }
+
+        private fun handleBindListView(entry: OPDSSeriesEntry) {
+            lblEntryTitle?.text = toTitleName(entry.title)
+
+            if (activity.isEntryRead(entry)) {
+                imgStatus?.setImageResource(R.drawable.ic_read)
+            } else {
+                imgStatus?.setImageDrawable(null)
+            }
+
+            handleSelectionBackground(entry)
+        }
+
+        private fun handleSelectionBackground(entry: OPDSSeriesEntry) {
+            if (selectMode && selected.contains(entry)) {
+                selectBackground?.visibility = View.VISIBLE
+                selectBackground?.setCardBackgroundColor(Color.parseColor("#4DFFFFFF"))
+            } else if (activity.isEntryRead(entry)) {
+                selectBackground?.visibility = View.VISIBLE
+                selectBackground?.setCardBackgroundColor(Color.parseColor("#99131313"))
+            } else {
+                selectBackground?.visibility = View.GONE
+            }
+        }
     }
 }

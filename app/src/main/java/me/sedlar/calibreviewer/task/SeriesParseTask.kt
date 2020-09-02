@@ -8,6 +8,7 @@ import me.sedlar.calibre.opds.local.OPDSLibrary
 import me.sedlar.calibre.opds.local.OPDSSeries
 import me.sedlar.calibre.opds.model.OPDSSeriesEntry
 import me.sedlar.calibreviewer.EntryListActivity
+import me.sedlar.calibreviewer.MIN_LIST_VIEW_COUNT
 import me.sedlar.calibreviewer.hasNetworkConnection
 import me.sedlar.calibreviewer.holder.SeriesHolder
 import me.sedlar.calibreviewer.util.await
@@ -25,13 +26,15 @@ class SeriesParseTask(private val activity: EntryListActivity, private val onFin
             val progressMax = holder.series.entries.size
             var progress = 0
 
-            holder.series.entries.map { entry ->
-                Callable {
-                    downloadThumbnail(holder.lib, holder.series, entry)
-                    progress++
-                    activity.setProgressPercent((progress.toDouble() / progressMax.toDouble()) * 100.0)
-                }
-            }.await(4)
+            if (holder.series.entries.size <= MIN_LIST_VIEW_COUNT || activity.isGridAlways()) {
+                holder.series.entries.map { entry ->
+                    Callable {
+                        downloadThumbnail(holder.lib, holder.series, entry)
+                        progress++
+                        activity.setProgressPercent((progress.toDouble() / progressMax.toDouble()) * 100.0)
+                    }
+                }.await(4)
+            }
         }
     }
 
