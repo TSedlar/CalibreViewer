@@ -23,6 +23,7 @@ import me.sedlar.calibreviewer.adapter.SeriesListRecyclerViewAdapter
 import me.sedlar.calibreviewer.holder.SeriesHolder
 import me.sedlar.calibreviewer.task.AcquisitionDownloadTask
 import me.sedlar.calibreviewer.task.SeriesParseTask
+import me.sedlar.calibreviewer.util.isComicOrManga
 import kotlin.math.ceil
 
 
@@ -199,6 +200,10 @@ class EntryListActivity : AppCompatActivity() {
             grid.visibility = View.VISIBLE
 
             var gridMode = series!!.entries.size <= MIN_LIST_VIEW_COUNT
+
+            if (series!!.isComicOrManga()) {
+                gridMode = false
+            }
 
             if (isGridAlways()) {
                 gridMode = true
