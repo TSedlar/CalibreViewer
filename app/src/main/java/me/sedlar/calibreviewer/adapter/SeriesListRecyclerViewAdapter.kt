@@ -26,6 +26,7 @@ import me.sedlar.calibreviewer.*
 import me.sedlar.calibreviewer.holder.SeriesHolder
 import me.sedlar.calibreviewer.task.AcquisitionDownloadTask
 import me.sedlar.calibreviewer.task.ImageDecodeTask
+import me.sedlar.calibreviewer.util.isComicOrManga
 import java.io.File
 import java.nio.file.Files
 import java.util.*
@@ -544,6 +545,8 @@ class SeriesListRecyclerViewAdapter(
             ImageDecodeTask(thumbnail, userDefinedThumbnail).execute(imgCover)
 
             lblEntryTitle?.text = toTitleName(entry.title)
+            useComicNameIfPossible()
+
             lblEntryTitle?.visibility =
                 if (activity.isShowingTitles()) View.VISIBLE else View.GONE
 
@@ -552,6 +555,7 @@ class SeriesListRecyclerViewAdapter(
 
         private fun handleBindListView(entry: OPDSSeriesEntry) {
             lblEntryTitle?.text = toTitleName(entry.title)
+            useComicNameIfPossible()
 
             if (activity.isEntryRead(entry)) {
                 imgStatus?.setImageResource(R.drawable.ic_read)
@@ -560,6 +564,16 @@ class SeriesListRecyclerViewAdapter(
             }
 
             handleSelectionBackground(entry)
+        }
+
+        private fun useComicNameIfPossible() {
+            if (holder.series.isComicOrManga()) {
+                lblEntryTitle?.let { txtView ->
+                    if (txtView.text.startsWith(holder.series.name)) {
+                        txtView.text = txtView.text.toString().replace(holder.series.name, "Chapter")
+                    }
+                }
+            }
         }
 
         private fun handleSelectionBackground(entry: OPDSSeriesEntry) {
