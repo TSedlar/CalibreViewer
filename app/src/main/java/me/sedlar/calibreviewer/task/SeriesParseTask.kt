@@ -18,15 +18,17 @@ import java.util.concurrent.Callable
 
 typealias SeriesTaskCallback = () -> Unit
 
-class SeriesParseTask(private val activity: EntryListActivity, private val onFinish: SeriesTaskCallback? = null) :
-    AsyncTask<SeriesHolder, Void, Unit>() {
+class SeriesParseTask(
+    private val activity: EntryListActivity,
+    private val onFinish: SeriesTaskCallback? = null
+) : AsyncTask<SeriesHolder, Void, Unit>() {
 
     override fun doInBackground(vararg params: SeriesHolder) {
         params.firstOrNull()?.let { holder ->
             val progressMax = holder.series.entries.size
             var progress = 0
 
-            if (holder.series.entries.size <= MIN_LIST_VIEW_COUNT || activity.isGridAlways()) {
+            if ((holder.series.entries.size <= MIN_LIST_VIEW_COUNT || activity.isGridAlways()) && !activity.isListAlways()) {
                 holder.series.entries.map { entry ->
                     Callable {
                         downloadThumbnail(holder.lib, holder.series, entry)

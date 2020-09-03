@@ -35,6 +35,12 @@
                 android:checkable="true"
                 android:checked="false"/>
 
+            <item android:id="@+id/action_use_list"
+                app:showAsAction="ifRoom"
+                android:title="Always Use List"
+                android:checkable="true"
+                android:checked="false"/>
+
             <item android:id="@+id/action_external_reader"
                 app:showAsAction="ifRoom"
                 android:title="External Reader"

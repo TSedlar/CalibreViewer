@@ -123,9 +123,28 @@ class EntryListActivity : AppCompatActivity() {
         // Add grid handler
         menu?.findItem(R.id.action_use_grid)?.let { menuItem ->
             menuItem.isChecked = isGridAlways()
-            menuItem.setOnMenuItemClickListener {
-                it.isChecked = !it.isChecked
-                setGridAlways(it.isChecked)
+            menuItem.setOnMenuItemClickListener { gridMenuItem ->
+                gridMenuItem.isChecked = !gridMenuItem.isChecked
+                if (gridMenuItem.isChecked) {
+                    menu.findItem(R.id.action_use_list)?.isChecked = false
+                    setListAlways(false)
+                }
+                setGridAlways(gridMenuItem.isChecked)
+                restartActivity()
+                true
+            }
+        }
+
+        // Add grid handler
+        menu?.findItem(R.id.action_use_list)?.let { menuItem ->
+            menuItem.isChecked = isListAlways()
+            menuItem.setOnMenuItemClickListener { listMenuItem ->
+                listMenuItem.isChecked = !listMenuItem.isChecked
+                if (listMenuItem.isChecked) {
+                    menu.findItem(R.id.action_use_grid)?.isChecked = false
+                    setGridAlways(false)
+                }
+                setListAlways(listMenuItem.isChecked)
                 restartActivity()
                 true
             }
@@ -179,7 +198,15 @@ class EntryListActivity : AppCompatActivity() {
             libGrid = grid
             grid.visibility = View.VISIBLE
 
-            val gridMode = series!!.entries.size <= MIN_LIST_VIEW_COUNT || isGridAlways()
+            var gridMode = series!!.entries.size <= MIN_LIST_VIEW_COUNT
+
+            if (isGridAlways()) {
+                gridMode = true
+            }
+
+            if (isListAlways()) {
+                gridMode = false
+            }
 
             if (gridMode) {
                 grid.layoutManager = GridLayoutManager(this, calculateNoOfColumns(130F))
@@ -251,6 +278,14 @@ class EntryListActivity : AppCompatActivity() {
 
     private fun setGridAlways(always: Boolean) {
         sharedPrefs.edit().putBoolean(KEY_GRID_ALWAYS, always).apply()
+    }
+
+    fun isListAlways(): Boolean {
+        return sharedPrefs.getBoolean(KEY_LIST_ALWAYS, false)
+    }
+
+    private fun setListAlways(always: Boolean) {
+        sharedPrefs.edit().putBoolean(KEY_LIST_ALWAYS, always).apply()
     }
 
     fun markRead(vararg entries: OPDSSeriesEntry) {
