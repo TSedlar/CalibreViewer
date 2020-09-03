@@ -214,22 +214,16 @@ class SeriesListRecyclerViewAdapter(
 
                 bookDialog.setAdapter(arrayAdapter) { dialog, which ->
                     arrayAdapter.getItem(which)?.let { selection ->
-                        when (selection.toLowerCase(Locale.getDefault())) {
-                            "download epub" -> handleAcquisitionDownload(entry, "epub")
-                            "open epub" -> handleAcquisitionOpen(entry, "epub")
-                            "delete epub" -> handleAcquisitionDelete(entry, "epub")
-
-                            "download zip" -> handleAcquisitionDownload(entry, "zip")
-                            "open zip" -> handleAcquisitionOpen(entry, "zip")
-                            "delete zip" -> handleAcquisitionDelete(entry, "zip")
-
-                            else -> {
-                                Toast.makeText(
-                                    view.context,
-                                    "Unsupported action: $selection",
-                                    Toast.LENGTH_LONG
-                                )
-                            }
+                        val sel = selection.toLowerCase(Locale.getDefault())
+                        if (sel.startsWith("download ")) {
+                            val ext = sel.split(" ")[1]
+                            handleAcquisitionDownload(entry, ext)
+                        } else if (sel.startsWith("open ")) {
+                            val ext = sel.split(" ")[1]
+                            handleAcquisitionOpen(entry, ext)
+                        } else if (sel.startsWith("delete ")) {
+                            val ext = sel.split(" ")[1]
+                            handleAcquisitionDelete(entry, ext)
                         }
                     }
 
